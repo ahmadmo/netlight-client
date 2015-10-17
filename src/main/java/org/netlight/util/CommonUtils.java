@@ -43,6 +43,10 @@ public final class CommonUtils {
         return !isNull(map);
     }
 
+    public static <T> T getOrDefault(T t, T def) {
+        return t == null ? def : t;
+    }
+
     @SuppressWarnings("unchecked")
     public static <T> T castOrDefault(Object o, Class<T> type, T def) {
         return o == null || !type.isInstance(o) ? def : (T) o;

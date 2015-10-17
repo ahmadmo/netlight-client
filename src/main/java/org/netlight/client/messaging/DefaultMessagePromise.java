@@ -1,9 +1,10 @@
 package org.netlight.client.messaging;
 
+import org.netlight.util.concurrent.AtomicBooleanField;
+import org.netlight.util.concurrent.AtomicReferenceField;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -14,12 +15,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public final class DefaultMessagePromise implements MessagePromise {
 
     private final Message message;
-    private final AtomicBoolean done = new AtomicBoolean();
-    private final AtomicBoolean success = new AtomicBoolean();
-    private final AtomicBoolean cancellable = new AtomicBoolean();
-    private final AtomicBoolean cancelled = new AtomicBoolean();
-    private final AtomicReference<Throwable> cause = new AtomicReference<>();
-    private final AtomicReference<Message> response = new AtomicReference<>();
+    private final AtomicBooleanField done = new AtomicBooleanField();
+    private final AtomicBooleanField success = new AtomicBooleanField();
+    private final AtomicBooleanField cancellable = new AtomicBooleanField();
+    private final AtomicBooleanField cancelled = new AtomicBooleanField();
+    private final AtomicReferenceField<Throwable> cause = new AtomicReferenceField<>();
+    private final AtomicReferenceField<Message> response = new AtomicReferenceField<>();
     private final List<MessageFutureListener> listeners = new ArrayList<>();
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Lock r = lock.readLock();

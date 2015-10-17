@@ -16,32 +16,42 @@ import org.netlight.client.messaging.MessageQueueLoopGroup;
 import org.netlight.util.EventNotifier;
 import org.netlight.util.EventNotifierHandler;
 import org.netlight.util.OSValidator;
+import org.netlight.util.concurrent.AtomicBooleanField;
+import org.netlight.util.concurrent.AtomicReferenceField;
 import org.netlight.util.serialization.ObjectSerializer;
 
 import java.net.SocketAddress;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author ahmad
  */
-public final class NettyClient implements Client, EventNotifierHandler<ChannelState, ChannelStateListener> {
+public final class NettyClient implements Client {
 
     private final SocketAddress remoteAddress;
     private final SslContext sslCtx;
     private final ClientChannelInitializer channelInitializer;
-    private final AtomicReference<Channel> channel = new AtomicReference<>();
-    private final AtomicReference<EventLoopGroup> group = new AtomicReference<>();
-    private final AtomicBoolean connected = new AtomicBoolean(false);
-    private final EventNotifier<ChannelState, ChannelStateListener> notifier;
+    private final AtomicReferenceField<Channel> channel = new AtomicReferenceField<>();
+    private final AtomicReferenceField<EventLoopGroup> group = new AtomicReferenceField<>();
+    private final AtomicBooleanField connected = new AtomicBooleanField(false);
+    private final EventNotifier<ChannelState, ChannelStateListener> channelStateNotifier;
 
     public NettyClient(SocketAddress remoteAddress, SslContext sslCtx, ObjectSerializer<Message> serializer, MessageQueueLoopGroup loopGroup) {
         Objects.requireNonNull(remoteAddress);
         this.remoteAddress = remoteAddress;
         this.sslCtx = sslCtx;
         this.channelInitializer = new ClientChannelInitializer(remoteAddress, sslCtx, serializer, loopGroup);
-        notifier = new EventNotifier<>(this, ChannelState.class);
+        channelStateNotifier = new EventNotifier<>(new EventNotifierHandler<ChannelState, ChannelStateListener>() {
+            @Override
+            public void handle(ChannelState event, ChannelStateListener listener) {
+                listener.stateChanged(event, NettyClient.this);
+            }
+
+            @Override
+            public void exceptionCaught(Throwable cause) {
+                channelStateNotifier.start();
+            }
+        }, ChannelState.class);
     }
 
     @Override
@@ -49,7 +59,7 @@ public final class NettyClient implements Client, EventNotifierHandler<ChannelSt
         if (connected.get()) {
             return true;
         }
-        notifier.start();
+        channelStateNotifier.start();
         final Bootstrap b = configureBootstrap(new Bootstrap());
         try {
             final Channel ch = b.connect().sync().channel();
@@ -74,7 +84,7 @@ public final class NettyClient implements Client, EventNotifierHandler<ChannelSt
             g.shutdownGracefully();
         }
         fireChannelStateChanged(ChannelState.DISCONNECTED);
-        notifier.stopLater();
+        channelStateNotifier.stopLater();
     }
 
     private Bootstrap configureBootstrap(Bootstrap b) {
@@ -119,17 +129,17 @@ public final class NettyClient implements Client, EventNotifierHandler<ChannelSt
 
     @Override
     public void addChannelStateListener(ChannelStateListener channelStateListener) {
-        notifier.addListener(channelStateListener);
+        channelStateNotifier.addListener(channelStateListener);
     }
 
     @Override
     public void removeChannelStateListener(ChannelStateListener channelStateListener) {
-        notifier.removeListener(channelStateListener);
+        channelStateNotifier.removeListener(channelStateListener);
     }
 
     @Override
     public void fireChannelStateChanged(ChannelState state) {
-        notifier.notify(state);
+        channelStateNotifier.notify(state);
     }
 
     @Override
@@ -138,16 +148,6 @@ public final class NettyClient implements Client, EventNotifierHandler<ChannelSt
         if (ch != null) {
             ch.close().awaitUninterruptibly();
         }
-    }
-
-    @Override
-    public void handle(ChannelState state, ChannelStateListener listener) {
-        listener.stateChanged(state, this);
-    }
-
-    @Override
-    public void exceptionCaught(Throwable cause) {
-        notifier.start();
     }
 
 }

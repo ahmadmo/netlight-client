@@ -1,11 +1,12 @@
 package org.netlight.util;
 
+import org.netlight.util.concurrent.AtomicBooleanField;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author ahmad
@@ -18,7 +19,7 @@ public final class EventNotifier<E, L> {
     private final List<L> listeners = new CopyOnWriteArrayList<>();
     private final EventNotifierHandler<E, L> handler;
     private final Class<E> eventType;
-    private final AtomicBoolean running = new AtomicBoolean();
+    private final AtomicBooleanField running = new AtomicBooleanField();
 
     public EventNotifier(EventNotifierHandler<E, L> handler,Class<E> eventType) {
         Objects.requireNonNull(handler);

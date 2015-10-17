@@ -1,4 +1,4 @@
-package org.netlight.serialization;
+package org.netlight;
 
 import org.netlight.client.messaging.Message;
 import org.netlight.util.serialization.JSONSerializer;

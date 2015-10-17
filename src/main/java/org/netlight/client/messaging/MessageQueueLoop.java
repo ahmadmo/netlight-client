@@ -1,9 +1,9 @@
 package org.netlight.client.messaging;
 
 import org.netlight.client.ConnectionContext;
+import org.netlight.util.concurrent.AtomicBooleanField;
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author ahmad
@@ -14,7 +14,7 @@ public final class MessageQueueLoop implements Runnable {
     private final MessageQueue messageQueue;
     private final MessageQueueLoopHandler handler;
     private final MessageQueueLoopStrategy loopStrategy;
-    private final AtomicBoolean looping = new AtomicBoolean(false);
+    private final AtomicBooleanField looping = new AtomicBooleanField(false);
 
     public MessageQueueLoop(ConnectionContext ctx, MessageQueue messageQueue,
                             MessageQueueLoopHandler handler, MessageQueueLoopStrategy loopStrategy) {

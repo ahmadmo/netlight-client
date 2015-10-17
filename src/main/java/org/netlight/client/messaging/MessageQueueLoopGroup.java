@@ -2,13 +2,13 @@ package org.netlight.client.messaging;
 
 import org.netlight.client.ConnectionContext;
 import org.netlight.util.TimeProperty;
+import org.netlight.util.concurrent.AtomicBooleanField;
 import org.netlight.util.concurrent.CacheManager;
 
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author ahmad
@@ -20,7 +20,7 @@ public final class MessageQueueLoopGroup {
     private final MessageQueueStrategy queueStrategy;
     private final MessageQueueLoopStrategy loopStrategy;
     private final CacheManager<ConnectionContext, MessageQueueLoop> loops;
-    private final AtomicBoolean looping = new AtomicBoolean(true);
+    private final AtomicBooleanField looping = new AtomicBooleanField(true);
 
     public MessageQueueLoopGroup(MessageQueueLoopHandler handler,
                                  MessageQueueStrategy queueStrategy, MessageQueueLoopStrategy loopStrategy) {
