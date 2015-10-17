@@ -1,5 +1,8 @@
 package org.netlight.util;
 
+import java.util.Collection;
+import java.util.Map;
+
 /**
  * @author ahmad
  */
@@ -16,12 +19,28 @@ public final class CommonUtils {
         return s == null || (s = s.trim()).isEmpty() || s.equalsIgnoreCase("null");
     }
 
+    public static boolean isNull(Collection collection) {
+        return collection == null || collection.isEmpty();
+    }
+
+    public static boolean isNull(Map map) {
+        return map == null || map.isEmpty();
+    }
+
     public static boolean notNull(Object o) {
         return !isNull(o);
     }
 
     public static boolean notNull(String s) {
         return !isNull(s);
+    }
+
+    public static boolean notNull(Collection collection) {
+        return !isNull(collection);
+    }
+
+    public static boolean notNull(Map map) {
+        return !isNull(map);
     }
 
     @SuppressWarnings("unchecked")
