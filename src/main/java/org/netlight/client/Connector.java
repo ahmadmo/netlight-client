@@ -63,8 +63,8 @@ public final class Connector implements AutoCloseable {
         return client.connect();
     }
 
-    public CompletableFuture<Void> connectAsync() {
-        return CompletableFuture.runAsync(this::connect);
+    public CompletableFuture<Boolean> connectAsync() {
+        return CompletableFuture.supplyAsync(this::connect);
     }
 
     public ChannelFuture closeFuture() {

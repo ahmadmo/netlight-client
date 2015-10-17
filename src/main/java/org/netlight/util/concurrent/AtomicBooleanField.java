@@ -30,6 +30,14 @@ public final class AtomicBooleanField {
         return updater.getAndSet(intValue(newValue)) == 1;
     }
 
+    public void lazySet(boolean newValue) {
+        updater.lazySet(intValue(newValue));
+    }
+
+    public boolean weakCompareAndSet(boolean expect, boolean update) {
+        return updater.weakCompareAndSet(intValue(expect), intValue(update));
+    }
+
     private static int intValue(boolean value) {
         return value ? 1 : 0;
     }
