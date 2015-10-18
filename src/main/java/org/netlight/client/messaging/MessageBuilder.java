@@ -27,8 +27,8 @@ public final class MessageBuilder {
     }
 
     public MessageBuilder put(String name, Object value) {
-        Objects.requireNonNull(name);
         if (notNull(value)) {
+            Objects.requireNonNull(name);
             message.put(name, value);
         }
         return this;

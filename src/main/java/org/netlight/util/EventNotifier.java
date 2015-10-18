@@ -66,7 +66,6 @@ public final class EventNotifier<E, L> {
                 } finally {
                     if (!exceptional) {
                         running.set(false);
-                        clearEvents();
                     }
                 }
             });

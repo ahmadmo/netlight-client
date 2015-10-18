@@ -83,8 +83,9 @@ public final class MessageQueueLoop implements Runnable {
     }
 
     public void stop() {
-        looping.set(false);
-        messageQueue.tryStop();
+        if (looping.compareAndSet(true, false)) {
+            messageQueue.tryStop();
+        }
     }
 
     @Override

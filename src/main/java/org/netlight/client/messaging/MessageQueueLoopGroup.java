@@ -31,7 +31,7 @@ public final class MessageQueueLoopGroup {
         this.handler = handler;
         this.queueStrategy = queueStrategy;
         this.loopStrategy = loopStrategy;
-        loops = new CacheManager<>(TimeProperty.minutes(15), notification -> {
+        loops = new CacheManager<>(TimeProperty.minutes(5), notification -> {
             MessageQueueLoop loop = notification.getValue();
             if (loop != null) {
                 loop.stop();

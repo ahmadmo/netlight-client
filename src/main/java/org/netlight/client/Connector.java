@@ -43,8 +43,8 @@ public final class Connector implements AutoCloseable {
     private final Client client;
     private final ClientHandler clientHandler;
     private final MessageHandler messageHandler = new MessageHandler();
-    private final ServerSentMessageNotifier serverSentMessageNotifier = new ServerSentMessageNotifier();
-    private final AtomicBooleanField reconnect = new AtomicBooleanField();
+    private final EventNotifier<Message, ServerSentMessageListener> serverSentMessageNotifier;
+    private final AtomicBooleanField reconnect = new AtomicBooleanField(true);
 
     public Connector(SocketAddress remoteAddress, TimeProperty reconnectInterval, ObjectSerializer<Message> serializer) {
         Objects.requireNonNull(reconnectInterval);
@@ -53,6 +53,17 @@ public final class Connector implements AutoCloseable {
         client = new NettyClient(remoteAddress, getSslContext(), serializer, loopGroup);
         client.addChannelStateListener(new Reconnector(reconnectInterval.to(TimeUnit.MILLISECONDS)));
         clientHandler = client.getChannelInitializer().getTcpChannelInitializer().getHandler();
+        serverSentMessageNotifier = new EventNotifier<>(new EventNotifierHandler<Message, ServerSentMessageListener>() {
+            @Override
+            public void handle(Message message, ServerSentMessageListener listener) {
+                listener.onMessage(message);
+            }
+
+            @Override
+            public void exceptionCaught(Throwable cause) {
+                serverSentMessageNotifier.start();
+            }
+        }, Message.class);
     }
 
     public SocketAddress getRemoteAddress() {
@@ -150,38 +161,6 @@ public final class Connector implements AutoCloseable {
                     }
                 }, delay);
             }
-        }
-
-    }
-
-    private static final class ServerSentMessageNotifier implements EventNotifierHandler<Message, ServerSentMessageListener> {
-
-        private final EventNotifier<Message, ServerSentMessageListener> notifier = new EventNotifier<>(this, Message.class);
-
-        private ServerSentMessageNotifier() {
-            notifier.start();
-        }
-
-        private void notify(Message message) {
-            notifier.notify(message);
-        }
-
-        private void addListener(ServerSentMessageListener listener) {
-            notifier.addListener(listener);
-        }
-
-        private void removeListener(ServerSentMessageListener listener) {
-            notifier.addListener(listener);
-        }
-
-        @Override
-        public void handle(Message message, ServerSentMessageListener listener) {
-            listener.onMessage(message);
-        }
-
-        @Override
-        public void exceptionCaught(Throwable cause) {
-            notifier.start();
         }
 
     }
