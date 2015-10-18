@@ -31,7 +31,6 @@ import static org.netlight.client.ChannelState.*;
  */
 public final class Connector implements AutoCloseable {
 
-    private static final TimeProperty DEFAULT_RECONNECT_INTERVAL = TimeProperty.seconds(2);
     private static final ObjectSerializer<Message> DEFAULT_OBJECT_SERIALIZER = StandardSerializers.JSON;
 
     private static final String MESSAGE_ID = "message_id";
@@ -44,14 +43,27 @@ public final class Connector implements AutoCloseable {
     private final ClientHandler clientHandler;
     private final MessageHandler messageHandler = new MessageHandler();
     private final EventNotifier<Message, ServerSentMessageListener> serverSentMessageNotifier;
-    private final AtomicBooleanField reconnect = new AtomicBooleanField(true);
+    private final AtomicBooleanField closed = new AtomicBooleanField();
+
+    public Connector(SocketAddress remoteAddress) {
+        this(remoteAddress, null, DEFAULT_OBJECT_SERIALIZER);
+    }
+
+    public Connector(SocketAddress remoteAddress, TimeProperty reconnectInterval) {
+        this(remoteAddress, reconnectInterval, DEFAULT_OBJECT_SERIALIZER);
+    }
+
+    public Connector(SocketAddress remoteAddress, ObjectSerializer<Message> serializer) {
+        this(remoteAddress, null, serializer);
+    }
 
     public Connector(SocketAddress remoteAddress, TimeProperty reconnectInterval, ObjectSerializer<Message> serializer) {
-        Objects.requireNonNull(reconnectInterval);
         this.remoteAddress = remoteAddress;
         loopGroup = new MessageQueueLoopGroup(messageHandler, new SingleMessageQueueStrategy(), new LoopShiftingStrategy());
         client = new NettyClient(remoteAddress, getSslContext(), serializer, loopGroup);
-        client.addChannelStateListener(new Reconnector(reconnectInterval.to(TimeUnit.MILLISECONDS)));
+        if (reconnectInterval != null) {
+            client.addChannelStateListener(new AutoReconnector(reconnectInterval.to(TimeUnit.MILLISECONDS)));
+        }
         clientHandler = client.getChannelInitializer().getTcpChannelInitializer().getHandler();
         serverSentMessageNotifier = new EventNotifier<>(new EventNotifierHandler<Message, ServerSentMessageListener>() {
             @Override
@@ -90,6 +102,14 @@ public final class Connector implements AutoCloseable {
         return messageHandler.send(message);
     }
 
+    public void addChannelStateListener(ChannelStateListener listener) {
+        client.addChannelStateListener(listener);
+    }
+
+    public void removeChannelStateListener(ChannelStateListener listener) {
+        client.removeChannelStateListener(listener);
+    }
+
     public void addServerSentMessageListener(ServerSentMessageListener listener) {
         serverSentMessageNotifier.addListener(listener);
     }
@@ -100,7 +120,7 @@ public final class Connector implements AutoCloseable {
 
     @Override
     public void close() {
-        reconnect.set(false);
+        closed.set(true);
         ((NettyClient) client).close();
         loopGroup.shutdownGracefully();
     }
@@ -141,20 +161,20 @@ public final class Connector implements AutoCloseable {
 
     }
 
-    private final class Reconnector implements ChannelStateListener {
+    private final class AutoReconnector implements ChannelStateListener {
 
         private final long delay;
 
-        private Reconnector(long delay) {
+        private AutoReconnector(long delay) {
             this.delay = delay;
         }
 
         @Override
         public void stateChanged(ChannelState state, Client client) {
             if (state == CONNECTED) {
-                reconnect.set(true);
+                closed.set(false);
                 serverSentMessageNotifier.start();
-            } else if (state == DISCONNECTED || state == CONNECTION_FAILED && reconnect.get()) {
+            } else if (state == DISCONNECTED || state == CONNECTION_FAILED && !closed.get()) {
                 serverSentMessageNotifier.stopLater();
                 new Timer().schedule(new TimerTask() {
                     @Override
@@ -170,8 +190,8 @@ public final class Connector implements AutoCloseable {
     public static final class ConnectorBuilder {
 
         private SocketAddress remoteAddress;
-        private ObjectSerializer<Message> serializer;
         private TimeProperty reconnectInterval;
+        private ObjectSerializer<Message> serializer;
 
         public ConnectorBuilder(SocketAddress remoteAddress) {
             this.remoteAddress = remoteAddress;
@@ -182,20 +202,18 @@ public final class Connector implements AutoCloseable {
             return this;
         }
 
+        public ConnectorBuilder autoReconnect(TimeProperty reconnectInterval) {
+            this.reconnectInterval = reconnectInterval;
+            return this;
+        }
+
         public ConnectorBuilder serializer(ObjectSerializer<Message> serializer) {
             this.serializer = serializer;
             return this;
         }
 
-        public ConnectorBuilder reconnectInterval(TimeProperty reconnectInterval) {
-            this.reconnectInterval = reconnectInterval;
-            return this;
-        }
-
         public Connector build() {
-            return new Connector(remoteAddress,
-                    CommonUtils.getOrDefault(reconnectInterval, DEFAULT_RECONNECT_INTERVAL),
-                    CommonUtils.getOrDefault(serializer, DEFAULT_OBJECT_SERIALIZER));
+            return new Connector(remoteAddress, reconnectInterval, CommonUtils.getOrDefault(serializer, DEFAULT_OBJECT_SERIALIZER));
         }
 
     }
