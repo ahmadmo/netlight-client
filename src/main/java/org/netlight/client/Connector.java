@@ -137,7 +137,7 @@ public final class Connector implements AutoCloseable {
             Objects.requireNonNull(message);
             long id = ID.incrementAndGet();
             message.put(MESSAGE_ID, id);
-            MessagePromise promise = new DefaultMessagePromise(message);
+            MessagePromise promise = new DefaultMessagePromise(message, remoteAddress);
             messageTracking.put(id, promise);
             clientHandler.sendMessage(remoteAddress, promise);
             return promise;

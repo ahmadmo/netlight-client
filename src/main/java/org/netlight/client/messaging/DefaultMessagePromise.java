@@ -3,6 +3,7 @@ package org.netlight.client.messaging;
 import org.netlight.util.concurrent.AtomicBooleanField;
 import org.netlight.util.concurrent.AtomicReferenceField;
 
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
@@ -15,6 +16,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public final class DefaultMessagePromise implements MessagePromise {
 
     private final Message message;
+    private final SocketAddress remoteAddress;
     private final AtomicBooleanField done = new AtomicBooleanField();
     private final AtomicBooleanField success = new AtomicBooleanField();
     private final AtomicBooleanField cancellable = new AtomicBooleanField();
@@ -26,8 +28,9 @@ public final class DefaultMessagePromise implements MessagePromise {
     private final Lock r = lock.readLock();
     private final Lock w = lock.readLock();
 
-    public DefaultMessagePromise(Message message) {
+    public DefaultMessagePromise(Message message, SocketAddress remoteAddress) {
         this.message = message;
+        this.remoteAddress = remoteAddress;
     }
 
     @Override
@@ -77,8 +80,13 @@ public final class DefaultMessagePromise implements MessagePromise {
     }
 
     @Override
-    public Message getMessage() {
+    public Message message() {
         return message;
+    }
+
+    @Override
+    public SocketAddress remoteAddress() {
+        return remoteAddress;
     }
 
     @Override

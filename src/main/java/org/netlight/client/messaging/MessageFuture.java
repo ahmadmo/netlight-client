@@ -1,11 +1,15 @@
 package org.netlight.client.messaging;
 
+import java.net.SocketAddress;
+
 /**
  * @author ahmad
  */
 public interface MessageFuture {
 
-    Message getMessage();
+    Message message();
+
+    SocketAddress remoteAddress();
 
     boolean isDone();
 

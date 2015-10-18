@@ -91,12 +91,12 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
 
     @Override
     public void sendMessage(ChannelHandlerContext ctx, MessagePromise promise) {
-        if (ctx == null || promise == null || promise.getMessage().isEmpty()) {
+        if (ctx == null || promise == null || promise.message().isEmpty()) {
             return;
         }
         final Channel channel = ctx.channel();
         if (channel.isActive() && channel.isWritable()) {
-            ctx.writeAndFlush(promise.getMessage()).addListener(f -> completePromise(promise, f));
+            ctx.writeAndFlush(promise.message()).addListener(f -> completePromise(promise, f));
         } else {
             promise.setCancellable(true);
             getQueue(channel.remoteAddress()).offer(promise);
@@ -172,9 +172,9 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
             MessagePromise promise;
             while (!promises.isEmpty() && channel.isActive() && channel.isWritable()) {
                 for (int i = 0; i < FLUSH_COUNT && (promise = promises.poll()) != null; i++) {
-                    if (!promise.isCancelled() && !promise.getMessage().isEmpty()) {
+                    if (!promise.isCancelled() && !promise.message().isEmpty()) {
                         final MessagePromise p = promise;
-                        ctx.write(p.getMessage()).addListener(f -> completePromise(p, f));
+                        ctx.write(p.message()).addListener(f -> completePromise(p, f));
                     }
                 }
                 ctx.flush();
