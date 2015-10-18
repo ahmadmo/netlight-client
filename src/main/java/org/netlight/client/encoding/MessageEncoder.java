@@ -18,6 +18,10 @@ public final class MessageEncoder extends MessageToByteEncoder<Message> {
 
     private final ObjectSerializer<Message> serializer;
 
+    public MessageEncoder() {
+        this(StandardSerializers.KRYO);
+    }
+
     public MessageEncoder(ObjectSerializer<Message> serializer) {
         Objects.requireNonNull(serializer);
         this.serializer = serializer;

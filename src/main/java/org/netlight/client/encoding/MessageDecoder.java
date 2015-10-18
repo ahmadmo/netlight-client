@@ -18,6 +18,10 @@ public final class MessageDecoder extends ByteToMessageDecoder {
 
     private final ObjectSerializer<Message> serializer;
 
+    public MessageDecoder() {
+        this(StandardSerializers.JSON);
+    }
+
     public MessageDecoder(ObjectSerializer<Message> serializer) {
         Objects.requireNonNull(serializer);
         this.serializer = serializer;
