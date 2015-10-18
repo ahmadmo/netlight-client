@@ -120,9 +120,10 @@ public final class Connector implements AutoCloseable {
 
     @Override
     public void close() {
-        closed.set(true);
-        ((NettyClient) client).close();
-        loopGroup.shutdownGracefully();
+        if (closed.compareAndSet(false, true)) {
+            ((NettyClient) client).close();
+            loopGroup.shutdownGracefully();
+        }
     }
 
     public void diconnect() {
@@ -179,7 +180,9 @@ public final class Connector implements AutoCloseable {
                 new Timer().schedule(new TimerTask() {
                     @Override
                     public void run() {
-                        client.connect();
+                        if (!closed.get()) {
+                            client.connect();
+                        }
                     }
                 }, delay);
             }

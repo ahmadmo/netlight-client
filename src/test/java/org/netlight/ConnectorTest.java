@@ -43,6 +43,9 @@ public final class ConnectorTest {
         String input;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
             while ((input = reader.readLine()) != null) {
+                if (input.equalsIgnoreCase("q") || input.equalsIgnoreCase("quit")) {
+                    break;
+                }
                 Message message = new Message();
                 message.put("user_input", input);
                 connector.send(message).addListener(listener);
@@ -50,6 +53,8 @@ public final class ConnectorTest {
         } finally {
             connector.close();
         }
+        System.out.println("END");
+        System.exit(0);
     }
 
     static final class MessageFutureListenerImpl implements MessageFutureListener {
