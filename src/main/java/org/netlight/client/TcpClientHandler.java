@@ -38,10 +38,15 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         final SocketAddress remoteAddress = ctx.channel().remoteAddress();
         connections.put(remoteAddress, getConnectionContext(ctx));
-        Queue<MessagePromise> queue = remove(remoteAddress);
+        Queue<MessagePromise> queue = removeMessages(remoteAddress);
         if (queue != null) {
             sendMessages(ctx, queue);
         }
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        connections.remove(ctx.channel().remoteAddress());
     }
 
     @Override
@@ -55,7 +60,7 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         final Channel channel = ctx.channel();
         if (channel.isWritable()) {
-            Queue<MessagePromise> queue = remove(channel.remoteAddress());
+            Queue<MessagePromise> queue = removeMessages(channel.remoteAddress());
             if (queue != null) {
                 sendMessages(ctx, queue);
             }
@@ -133,7 +138,7 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
         return queue;
     }
 
-    private void enqueue(SocketAddress key, Collection<MessagePromise> promises) {
+    private void enqueueMessages(SocketAddress key, Collection<MessagePromise> promises) {
         Queue<MessagePromise> queue = pendingMessages.get(key);
         if (queue == null) {
             queue = pendingMessages.putIfAbsent(key, promises instanceof ConcurrentLinkedQueue
@@ -145,7 +150,7 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
         }
     }
 
-    private Queue<MessagePromise> remove(final SocketAddress key) {
+    private Queue<MessagePromise> removeMessages(final SocketAddress key) {
         return key == null ? null : pendingMessages.remove(key);
     }
 
@@ -176,7 +181,7 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
             }
             if (!promises.isEmpty()) {
                 promises.forEach(p -> p.setCancellable(true));
-                enqueue(channel.remoteAddress(), promises);
+                enqueueMessages(channel.remoteAddress(), promises);
             }
         }
 
