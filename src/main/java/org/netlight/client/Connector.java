@@ -153,7 +153,9 @@ public final class Connector implements AutoCloseable {
         public void stateChanged(ChannelState state, Client client) {
             if (state == CONNECTED) {
                 reconnect.set(true);
+                serverSentMessageNotifier.start();
             } else if (state == DISCONNECTED || state == CONNECTION_FAILED && reconnect.get()) {
+                serverSentMessageNotifier.stopLater();
                 new Timer().schedule(new TimerTask() {
                     @Override
                     public void run() {
