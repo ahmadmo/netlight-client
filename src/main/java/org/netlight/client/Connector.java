@@ -49,20 +49,20 @@ public final class Connector implements AutoCloseable {
         this(remoteAddress, null, DEFAULT_OBJECT_SERIALIZER);
     }
 
-    public Connector(SocketAddress remoteAddress, TimeProperty reconnectInterval) {
-        this(remoteAddress, reconnectInterval, DEFAULT_OBJECT_SERIALIZER);
+    public Connector(SocketAddress remoteAddress, TimeProperty autoReconnectInterval) {
+        this(remoteAddress, autoReconnectInterval, DEFAULT_OBJECT_SERIALIZER);
     }
 
     public Connector(SocketAddress remoteAddress, ObjectSerializer<Message> serializer) {
         this(remoteAddress, null, serializer);
     }
 
-    public Connector(SocketAddress remoteAddress, TimeProperty reconnectInterval, ObjectSerializer<Message> serializer) {
+    public Connector(SocketAddress remoteAddress, TimeProperty autoReconnectInterval, ObjectSerializer<Message> serializer) {
         this.remoteAddress = remoteAddress;
         loopGroup = new MessageQueueLoopGroup(messageHandler, new SingleMessageQueueStrategy(), new LoopShiftingStrategy());
         client = new NettyClient(remoteAddress, getSslContext(), serializer, loopGroup);
-        if (reconnectInterval != null) {
-            client.addChannelStateListener(new AutoReconnector(reconnectInterval.to(TimeUnit.MILLISECONDS)));
+        if (autoReconnectInterval != null) {
+            client.addChannelStateListener(new AutoReconnector(autoReconnectInterval.to(TimeUnit.MILLISECONDS)));
         }
         clientHandler = client.getChannelInitializer().getTcpChannelInitializer().getHandler();
         serverSentMessageNotifier = new EventNotifier<>(new EventNotifierHandler<Message, ServerSentMessageListener>() {
@@ -190,7 +190,7 @@ public final class Connector implements AutoCloseable {
     public static final class ConnectorBuilder {
 
         private SocketAddress remoteAddress;
-        private TimeProperty reconnectInterval;
+        private TimeProperty autoReconnectInterval;
         private ObjectSerializer<Message> serializer;
 
         public ConnectorBuilder(SocketAddress remoteAddress) {
@@ -202,8 +202,8 @@ public final class Connector implements AutoCloseable {
             return this;
         }
 
-        public ConnectorBuilder autoReconnect(TimeProperty reconnectInterval) {
-            this.reconnectInterval = reconnectInterval;
+        public ConnectorBuilder autoReconnect(TimeProperty autoReconnectInterval) {
+            this.autoReconnectInterval = autoReconnectInterval;
             return this;
         }
 
@@ -213,7 +213,7 @@ public final class Connector implements AutoCloseable {
         }
 
         public Connector build() {
-            return new Connector(remoteAddress, reconnectInterval, CommonUtils.getOrDefault(serializer, DEFAULT_OBJECT_SERIALIZER));
+            return new Connector(remoteAddress, autoReconnectInterval, CommonUtils.getOrDefault(serializer, DEFAULT_OBJECT_SERIALIZER));
         }
 
     }
