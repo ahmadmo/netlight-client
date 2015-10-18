@@ -16,6 +16,23 @@
         <kryo.version>3.0.3</kryo.version>
     </properties>
 
+    <name>NetLight Client</name>
+    <url>https://github.com/ahmadmo/netlight-client</url>
+
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git@github.com/netlight-client.git</connection>
+        <developerConnection>scm:git:git@github.com/netlight-client.git</developerConnection>
+        <url>git@github.com/netlight-client.git</url>
+    </scm>
+
     <build>
         <plugins>
             <plugin>
