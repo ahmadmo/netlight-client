@@ -19,7 +19,7 @@ public final class MessageEncoder extends MessageToByteEncoder<Message> {
     private final ObjectSerializer<Message> serializer;
 
     public MessageEncoder() {
-        this(StandardSerializers.KRYO);
+        this(StandardSerializers.JSON);
     }
 
     public MessageEncoder(ObjectSerializer<Message> serializer) {
