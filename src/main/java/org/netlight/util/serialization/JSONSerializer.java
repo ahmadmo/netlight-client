@@ -9,14 +9,15 @@ import com.fasterxml.jackson.databind.ObjectWriter;
  */
 public final class JSONSerializer<T> implements ObjectSerializer<T> {
 
-    private final Class<T> type;
     private final ObjectWriter writer;
     private final ObjectReader reader;
+    private final Class<T> type;
 
     public JSONSerializer(Class<T> type) {
+        final ObjectMapper mapper = new ObjectMapper();
+        writer = mapper.writerFor(type);
+        reader = mapper.readerFor(type);
         this.type = type;
-        writer = new ObjectMapper().writerFor(type);
-        reader = new ObjectMapper().reader(type);
     }
 
     @Override
