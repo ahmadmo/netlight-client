@@ -109,7 +109,7 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
             return;
         }
         final Channel channel = ctx.channel();
-        if (channel.isActive()) {
+        if (channel.isActive() && channel.isWritable()) {
             channel.eventLoop().execute(new BatchMessageSender(ctx, promises));
         } else {
             promises.forEach(p -> p.setCancellable(true));
