@@ -38,7 +38,7 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         final SocketAddress remoteAddress = ctx.channel().remoteAddress();
         connections.put(remoteAddress, getConnectionContext(ctx));
-        Queue<MessagePromise> queue = removeMessages(remoteAddress);
+        Queue<MessagePromise> queue = pendingMessages.remove(remoteAddress);
         if (queue != null) {
             sendMessages(ctx, queue);
         }
@@ -60,7 +60,7 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         final Channel channel = ctx.channel();
         if (channel.isWritable()) {
-            Queue<MessagePromise> queue = removeMessages(channel.remoteAddress());
+            Queue<MessagePromise> queue = pendingMessages.remove(channel.remoteAddress());
             if (queue != null) {
                 sendMessages(ctx, queue);
             }
@@ -111,6 +111,9 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
         final Channel channel = ctx.channel();
         if (channel.isActive()) {
             channel.eventLoop().execute(new BatchMessageSender(ctx, promises));
+        } else {
+            promises.forEach(p -> p.setCancellable(true));
+            enqueueMessages(channel.remoteAddress(), promises);
         }
     }
 
@@ -148,10 +151,6 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
         if (queue != null) {
             queue.addAll(promises);
         }
-    }
-
-    private Queue<MessagePromise> removeMessages(final SocketAddress key) {
-        return key == null ? null : pendingMessages.remove(key);
     }
 
     private final class BatchMessageSender implements Runnable {
