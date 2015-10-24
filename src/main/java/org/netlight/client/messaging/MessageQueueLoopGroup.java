@@ -7,7 +7,6 @@ import org.netlight.util.concurrent.CacheManager;
 
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -15,28 +14,31 @@ import java.util.concurrent.TimeUnit;
  */
 public final class MessageQueueLoopGroup {
 
-    private final ExecutorService es;
+    private final ExecutorService executorService;
     private final MessageQueueLoopHandler handler;
     private final MessageQueueStrategy queueStrategy;
     private final MessageQueueLoopStrategy loopStrategy;
     private final CacheManager<ConnectionContext, MessageQueueLoop> loops;
     private final AtomicBooleanField looping = new AtomicBooleanField(true);
 
-    public MessageQueueLoopGroup(MessageQueueLoopHandler handler,
+    public MessageQueueLoopGroup(ExecutorService executorService, MessageQueueLoopHandler handler,
                                  MessageQueueStrategy queueStrategy, MessageQueueLoopStrategy loopStrategy) {
+        Objects.requireNonNull(executorService);
         Objects.requireNonNull(handler);
         Objects.requireNonNull(queueStrategy);
         Objects.requireNonNull(loopStrategy);
-        es = Executors.newCachedThreadPool();
+        this.executorService = executorService;
         this.handler = handler;
         this.queueStrategy = queueStrategy;
         this.loopStrategy = loopStrategy;
-        loops = new CacheManager<>(TimeProperty.minutes(5), notification -> {
-            MessageQueueLoop loop = notification.getValue();
-            if (loop != null) {
-                loop.stop();
-            }
-        });
+        loops = CacheManager.<ConnectionContext, MessageQueueLoop>newBuilder()
+                .expireAfterAccess(TimeProperty.minutes(5))
+                .removalListener(notification -> {
+                    MessageQueueLoop loop = notification.getValue();
+                    if (loop != null) {
+                        loop.stop();
+                    }
+                }).build();
     }
 
     public void queueMessage(ConnectionContext ctx, Message message) {
@@ -44,7 +46,7 @@ public final class MessageQueueLoopGroup {
         loop.getMessageQueue().add(message);
         loop.getLoopStrategy().poke();
         if (!loop.isLooping()) {
-            es.execute(loop);
+            executorService.execute(loop);
         }
     }
 
@@ -65,11 +67,11 @@ public final class MessageQueueLoopGroup {
 
     public boolean shutdownGracefully() {
         if (looping.compareAndSet(true, false)) {
-            es.shutdown();
+            executorService.shutdown();
             loops.forEachValue(MessageQueueLoop::stop);
-            es.shutdownNow();
+            executorService.shutdownNow();
             try {
-                return es.awaitTermination(15L, TimeUnit.SECONDS);
+                return executorService.awaitTermination(15L, TimeUnit.SECONDS);
             } catch (InterruptedException ignored) {
             }
         }

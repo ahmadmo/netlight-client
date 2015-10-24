@@ -11,9 +11,7 @@ import java.util.function.Function;
  */
 public final class PeriodicAtomicReferenceFieldUpdater<V> {
 
-    @SuppressWarnings("all")
-    private volatile V value;
-    private final AtomicReferenceField<V> updater;
+    private final AtomicReferenceField<V> value;
     private final Function<V, V> updaterFunction;
     private final AtomicLongField updateInterval;
     private final AtomicLongField lastSet;
@@ -22,7 +20,7 @@ public final class PeriodicAtomicReferenceFieldUpdater<V> {
         Objects.requireNonNull(value);
         Objects.requireNonNull(updaterFunction);
         Objects.requireNonNull(updateInterval);
-        updater = new AtomicReferenceField<>(value);
+        this.value = new AtomicReferenceField<>(value);
         this.updaterFunction = updaterFunction;
         this.updateInterval = new AtomicLongField(updateInterval.to(TimeUnit.MILLISECONDS));
         lastSet = new AtomicLongField(System.currentTimeMillis());
@@ -30,13 +28,13 @@ public final class PeriodicAtomicReferenceFieldUpdater<V> {
 
     public V get() {
         update();
-        return updater.get();
+        return value.get();
     }
 
     private void update() {
         long n = (System.currentTimeMillis() - lastSet.get()) / updateInterval.get();
         if (n > 0) {
-            final V e = updater.get();
+            final V e = value.get();
             V u = e;
             for (; n > 0; n--) {
                 u = updaterFunction.apply(u);
@@ -46,7 +44,7 @@ public final class PeriodicAtomicReferenceFieldUpdater<V> {
     }
 
     private boolean compareAndSet0(V expect, V update) {
-        boolean modified = updater.compareAndSet(expect, update);
+        boolean modified = value.compareAndSet(expect, update);
         if (modified) {
             lastSet.set(System.currentTimeMillis());
         }
@@ -54,7 +52,7 @@ public final class PeriodicAtomicReferenceFieldUpdater<V> {
     }
 
     public void set(V value) {
-        updater.set(value);
+        this.value.set(value);
         lastSet.set(System.currentTimeMillis());
     }
 

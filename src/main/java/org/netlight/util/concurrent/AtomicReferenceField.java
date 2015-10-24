@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  */
 public final class AtomicReferenceField<V> {
 
-    @SuppressWarnings("all")
+    @SuppressWarnings("unused")
     private volatile V value;
     private final AtomicReferenceFieldUpdater<AtomicReferenceField, Object> updater =
             AtomicReferenceFieldUpdater.newUpdater(AtomicReferenceField.class, Object.class, "value");
@@ -35,6 +35,14 @@ public final class AtomicReferenceField<V> {
     @SuppressWarnings("unchecked")
     public V getAndSet(V newValue) {
         return (V) updater.getAndSet(this, newValue);
+    }
+
+    public void lazySet(V newValue) {
+        updater.lazySet(this, newValue);
+    }
+
+    public boolean weakCompareAndSet(V expect, V update) {
+        return updater.weakCompareAndSet(this, expect, update);
     }
 
 }

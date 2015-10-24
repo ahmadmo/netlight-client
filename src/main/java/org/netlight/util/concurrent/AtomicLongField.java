@@ -9,7 +9,7 @@ import java.util.function.LongUnaryOperator;
  */
 public final class AtomicLongField {
 
-    @SuppressWarnings("all")
+    @SuppressWarnings("unused")
     private volatile long value;
     private final AtomicLongFieldUpdater<AtomicLongField> updater =
             AtomicLongFieldUpdater.newUpdater(AtomicLongField.class, "value");

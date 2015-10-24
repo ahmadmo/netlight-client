@@ -22,6 +22,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.netlight.client.ChannelState.*;
@@ -59,7 +60,8 @@ public final class Connector implements AutoCloseable {
 
     public Connector(SocketAddress remoteAddress, TimeProperty autoReconnectInterval, ObjectSerializer<Message> serializer) {
         this.remoteAddress = remoteAddress;
-        loopGroup = new MessageQueueLoopGroup(messageHandler, new SingleMessageQueueStrategy(), new LoopShiftingStrategy());
+        loopGroup = new MessageQueueLoopGroup(Executors.newCachedThreadPool(), messageHandler,
+                new SingleMessageQueueStrategy(), new LoopShiftingStrategy());
         client = new NettyClient(remoteAddress, getSslContext(), serializer, loopGroup);
         if (autoReconnectInterval != null) {
             client.addChannelStateListener(new AutoReconnector(autoReconnectInterval.to(TimeUnit.MILLISECONDS)));

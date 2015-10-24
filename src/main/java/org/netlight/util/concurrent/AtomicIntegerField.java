@@ -9,7 +9,7 @@ import java.util.function.IntUnaryOperator;
  */
 public final class AtomicIntegerField {
 
-    @SuppressWarnings("all")
+    @SuppressWarnings("unused")
     private volatile int value;
     private final AtomicIntegerFieldUpdater<AtomicIntegerField> updater =
             AtomicIntegerFieldUpdater.newUpdater(AtomicIntegerField.class, "value");
