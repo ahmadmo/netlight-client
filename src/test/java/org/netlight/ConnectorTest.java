@@ -18,10 +18,10 @@ import java.net.InetSocketAddress;
 public final class ConnectorTest {
 
     public static void main(String[] args) throws IOException {
-Connector connector = Connector.to(new InetSocketAddress("localhost", 18874))
-        .autoReconnect(TimeProperty.seconds(5))
-        .protocol(JsonEncodingProtocol.INSTANCE)
-        .build();
+        Connector connector = Connector.to(new InetSocketAddress("localhost", 18874))
+                .autoReconnect(TimeProperty.seconds(5))
+                .protocol(JsonEncodingProtocol.INSTANCE)
+                .build();
 
         connector.addChannelStateListener((state, client) -> {
             switch (state) {
