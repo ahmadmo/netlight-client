@@ -11,14 +11,13 @@ import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslContext;
-import org.netlight.client.messaging.Message;
-import org.netlight.client.messaging.MessageQueueLoopGroup;
+import org.netlight.encoding.EncodingProtocol;
+import org.netlight.messaging.MessageQueueLoopGroup;
 import org.netlight.util.EventNotifier;
 import org.netlight.util.EventNotifierHandler;
 import org.netlight.util.OSValidator;
 import org.netlight.util.concurrent.AtomicBooleanField;
 import org.netlight.util.concurrent.AtomicReferenceField;
-import org.netlight.util.serialization.ObjectSerializer;
 
 import java.net.SocketAddress;
 import java.util.Objects;
@@ -36,11 +35,12 @@ public final class NettyClient implements Client {
     private final AtomicBooleanField connected = new AtomicBooleanField(false);
     private final EventNotifier<ChannelState, ChannelStateListener> channelStateNotifier;
 
-    public NettyClient(SocketAddress remoteAddress, SslContext sslCtx, ObjectSerializer<Message> serializer, MessageQueueLoopGroup loopGroup) {
+    public NettyClient(SocketAddress remoteAddress, SslContext sslCtx,
+                       EncodingProtocol protocol, MessageQueueLoopGroup loopGroup) {
         Objects.requireNonNull(remoteAddress);
         this.remoteAddress = remoteAddress;
         this.sslCtx = sslCtx;
-        this.channelInitializer = new ClientChannelInitializer(remoteAddress, sslCtx, serializer, loopGroup);
+        this.channelInitializer = new ClientChannelInitializer(remoteAddress, sslCtx, protocol, loopGroup);
         channelStateNotifier = new EventNotifier<>(new EventNotifierHandler<ChannelState, ChannelStateListener>() {
             @Override
             public void handle(ChannelState event, ChannelStateListener listener) {

@@ -4,9 +4,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.ssl.SslContext;
-import org.netlight.client.messaging.Message;
-import org.netlight.client.messaging.MessageQueueLoopGroup;
-import org.netlight.util.serialization.ObjectSerializer;
+import org.netlight.encoding.EncodingProtocol;
+import org.netlight.messaging.MessageQueueLoopGroup;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -22,11 +21,11 @@ public final class ClientChannelInitializer extends ChannelInitializer<Channel> 
     private final TcpChannelInitializer tcpChannelInitializer;
 
     public ClientChannelInitializer(SocketAddress remoteAddress, SslContext sslCtx,
-                                    ObjectSerializer<Message> serializer, MessageQueueLoopGroup loopGroup) {
+                                    EncodingProtocol protocol, MessageQueueLoopGroup loopGroup) {
         Objects.requireNonNull(remoteAddress);
         this.remoteAddress = remoteAddress;
         this.sslCtx = sslCtx;
-        this.tcpChannelInitializer = new TcpChannelInitializer(serializer, loopGroup);
+        this.tcpChannelInitializer = new TcpChannelInitializer(protocol, loopGroup);
     }
 
     @Override

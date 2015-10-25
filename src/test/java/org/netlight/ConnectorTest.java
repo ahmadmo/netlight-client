@@ -1,10 +1,10 @@
 package org.netlight;
 
 import org.netlight.client.Connector;
-import org.netlight.client.encoding.StandardSerializers;
-import org.netlight.client.messaging.Message;
-import org.netlight.client.messaging.MessageFuture;
-import org.netlight.client.messaging.MessageFutureListener;
+import org.netlight.encoding.JsonEncodingProtocol;
+import org.netlight.messaging.Message;
+import org.netlight.messaging.MessageFuture;
+import org.netlight.messaging.MessageFutureListener;
 import org.netlight.util.TimeProperty;
 
 import java.io.BufferedReader;
@@ -20,7 +20,7 @@ public final class ConnectorTest {
     public static void main(String[] args) throws IOException {
         Connector connector = Connector.to(new InetSocketAddress("localhost", 18874))
                 .autoReconnect(TimeProperty.seconds(5))
-                .serializer(StandardSerializers.KRYO)
+                .protocol(JsonEncodingProtocol.INSTANCE)
                 .build();
 
         connector.addChannelStateListener((state, client) -> {
@@ -61,7 +61,7 @@ public final class ConnectorTest {
 
         @Override
         public void onComplete(MessageFuture future) {
-            Long id = future.message().getLong("message_id");
+            Number id = future.message().getNumber("message_id");
             if (!future.isSuccess()) {
                 System.out.println("FAILED TO SEND MESSAGE! (id = " + id + ")");
                 Throwable cause = future.cause();
@@ -75,7 +75,7 @@ public final class ConnectorTest {
 
         @Override
         public void onResponse(MessageFuture future, Message message) {
-            System.out.println(future.remoteAddress() + " (reply to = " + message.getLong("correlation_id") + ") : " + message.getString("reply"));
+            System.out.println(future.remoteAddress() + " (reply to = " + message.getNumber("correlation_id") + ") : " + message.getString("reply"));
         }
 
     }

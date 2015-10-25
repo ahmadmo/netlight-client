@@ -2,7 +2,7 @@ package org.netlight.client;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import org.netlight.client.messaging.MessagePromise;
+import org.netlight.messaging.MessagePromise;
 
 import java.net.SocketAddress;
 import java.util.Collection;
@@ -15,6 +15,8 @@ public interface ClientHandler extends ChannelHandler {
     ConnectionContext getConnectionContext(SocketAddress remoteAddress);
 
     void sendMessage(SocketAddress remoteAddress, MessagePromise promise);
+
+    void sendMessages(SocketAddress remoteAddress, Collection<MessagePromise> promises);
 
     void sendMessage(ChannelHandlerContext ctx, MessagePromise promise);
 

@@ -1,13 +1,10 @@
 package org.netlight.client;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.util.concurrent.Future;
-import org.netlight.client.messaging.Message;
-import org.netlight.client.messaging.MessagePromise;
-import org.netlight.client.messaging.MessageQueueLoopGroup;
+import org.netlight.messaging.Message;
+import org.netlight.messaging.MessagePromise;
+import org.netlight.messaging.MessageQueueLoopGroup;
 
 import java.net.SocketAddress;
 import java.util.Collection;
@@ -86,6 +83,17 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
         } else {
             promise.setCancellable(true);
             getQueue(remoteAddress).offer(promise);
+        }
+    }
+
+    @Override
+    public void sendMessages(SocketAddress remoteAddress, Collection<MessagePromise> promises) {
+        final ConnectionContext ctx = connections.get(remoteAddress);
+        if (ctx != null) {
+            sendMessages(ctx.channelHandlerContext(), promises);
+        } else {
+            promises.forEach(p -> p.setCancellable(true));
+            enqueueMessages(remoteAddress, promises);
         }
     }
 

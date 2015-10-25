@@ -1,4 +1,4 @@
-package org.netlight.client.messaging;
+package org.netlight.messaging;
 
 import org.netlight.util.TimeProperty;
 

@@ -3,12 +3,14 @@ package org.netlight.util.serialization;
 /**
  * @author ahmad
  */
-public interface ObjectSerializer<T> {
+public interface ObjectSerializer<I, O> {
 
-    byte[] serialize(T t) throws Exception;
+    O serialize(I in) throws Exception;
 
-    T deserialize(byte[] bytes) throws Exception;
+    I deserialize(O out) throws Exception;
 
-    Class<T> getType();
+    Class<I> getInputType();
+
+    Class<O> getOutputType();
 
 }

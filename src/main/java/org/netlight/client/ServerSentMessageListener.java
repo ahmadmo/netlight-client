@@ -1,6 +1,6 @@
 package org.netlight.client;
 
-import org.netlight.client.messaging.Message;
+import org.netlight.messaging.Message;
 
 /**
  * @author ahmad

@@ -1,4 +1,4 @@
-package org.netlight.client.messaging;
+package org.netlight.messaging;
 
 import java.util.ArrayList;
 import java.util.Collections;

@@ -4,35 +4,49 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+
 /**
  * @author ahmad
  */
-public final class JSONSerializer<T> implements ObjectSerializer<T> {
+public final class JSONSerializer<I> implements TextObjectSerializer<I> {
 
     private final ObjectWriter writer;
     private final ObjectReader reader;
-    private final Class<T> type;
+    private final Class<I> inputType;
+    private final Charset charset;
 
-    public JSONSerializer(Class<T> type) {
+    public JSONSerializer(Class<I> inputType) {
+        this(inputType, StandardCharsets.UTF_8);
+    }
+
+    public JSONSerializer(Class<I> inputType, Charset charset) {
+        this.charset = charset;
         final ObjectMapper mapper = new ObjectMapper();
-        writer = mapper.writerFor(type);
-        reader = mapper.readerFor(type);
-        this.type = type;
+        writer = mapper.writerFor(inputType);
+        reader = mapper.readerFor(inputType);
+        this.inputType = inputType;
     }
 
     @Override
-    public byte[] serialize(T t) throws Exception {
-        return writer.writeValueAsBytes(t);
+    public String serialize(I obj) throws Exception {
+        return writer.writeValueAsString(obj);
     }
 
     @Override
-    public T deserialize(byte[] bytes) throws Exception {
-        return reader.readValue(bytes);
+    public I deserialize(String json) throws Exception {
+        return reader.readValue(json);
     }
 
     @Override
-    public Class<T> getType() {
-        return type;
+    public Class<I> getInputType() {
+        return inputType;
+    }
+
+    @Override
+    public Charset charset() {
+        return charset;
     }
 
 }

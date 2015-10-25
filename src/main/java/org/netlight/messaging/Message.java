@@ -1,4 +1,4 @@
-package org.netlight.client.messaging;
+package org.netlight.messaging;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.netlight.util.CommonUtils;
@@ -47,6 +47,10 @@ public final class Message extends HashMap<String, Object> {
 
     public Double getDouble(String key) {
         return get(key, Double.class);
+    }
+
+    public Number getNumber(String key) {
+        return get(key, Number.class);
     }
 
     public Date getDate(String key) {

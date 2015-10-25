@@ -4,15 +4,15 @@ import io.netty.channel.ChannelFuture;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import org.netlight.client.encoding.StandardSerializers;
-import org.netlight.client.messaging.*;
+import org.netlight.encoding.EncodingProtocol;
+import org.netlight.encoding.JsonEncodingProtocol;
+import org.netlight.messaging.*;
 import org.netlight.util.CommonUtils;
 import org.netlight.util.EventNotifier;
 import org.netlight.util.EventNotifierHandler;
 import org.netlight.util.TimeProperty;
 import org.netlight.util.concurrent.AtomicBooleanField;
 import org.netlight.util.concurrent.AtomicLongField;
-import org.netlight.util.serialization.ObjectSerializer;
 
 import javax.net.ssl.SSLException;
 import java.net.SocketAddress;
@@ -32,7 +32,7 @@ import static org.netlight.client.ChannelState.*;
  */
 public final class Connector implements AutoCloseable {
 
-    private static final ObjectSerializer<Message> DEFAULT_OBJECT_SERIALIZER = StandardSerializers.JSON;
+    private static final EncodingProtocol DEFAULT_ENCODING_PROTOCOL = JsonEncodingProtocol.INSTANCE;
 
     private static final String MESSAGE_ID = "message_id";
     private static final String CORRELATION_ID = "correlation_id";
@@ -47,22 +47,22 @@ public final class Connector implements AutoCloseable {
     private final AtomicBooleanField closed = new AtomicBooleanField();
 
     public Connector(SocketAddress remoteAddress) {
-        this(remoteAddress, null, DEFAULT_OBJECT_SERIALIZER);
+        this(remoteAddress, null, DEFAULT_ENCODING_PROTOCOL);
     }
 
     public Connector(SocketAddress remoteAddress, TimeProperty autoReconnectInterval) {
-        this(remoteAddress, autoReconnectInterval, DEFAULT_OBJECT_SERIALIZER);
+        this(remoteAddress, autoReconnectInterval, DEFAULT_ENCODING_PROTOCOL);
     }
 
-    public Connector(SocketAddress remoteAddress, ObjectSerializer<Message> serializer) {
-        this(remoteAddress, null, serializer);
+    public Connector(SocketAddress remoteAddress, EncodingProtocol protocol) {
+        this(remoteAddress, null, protocol);
     }
 
-    public Connector(SocketAddress remoteAddress, TimeProperty autoReconnectInterval, ObjectSerializer<Message> serializer) {
+    public Connector(SocketAddress remoteAddress, TimeProperty autoReconnectInterval, EncodingProtocol protocol) {
         this.remoteAddress = remoteAddress;
         loopGroup = new MessageQueueLoopGroup(Executors.newCachedThreadPool(), messageHandler,
                 new SingleMessageQueueStrategy(), new LoopShiftingStrategy());
-        client = new NettyClient(remoteAddress, getSslContext(), serializer, loopGroup);
+        client = new NettyClient(remoteAddress, getSslContext(), protocol, loopGroup);
         if (autoReconnectInterval != null) {
             client.addChannelStateListener(new AutoReconnector(autoReconnectInterval.to(TimeUnit.MILLISECONDS)));
         }
@@ -148,9 +148,9 @@ public final class Connector implements AutoCloseable {
 
         @Override
         public void onMessage(MessageQueueLoop loop, Message message) {
-            Long id = message.getLong(CORRELATION_ID);
+            Number id = message.getNumber(CORRELATION_ID);
             MessagePromise promise;
-            if (id == null || (promise = messageTracking.remove(id)) == null) {
+            if (id == null || (promise = messageTracking.remove(id.longValue())) == null) {
                 serverSentMessageNotifier.notify(message);
             } else {
                 promise.setResponse(message);
@@ -196,7 +196,7 @@ public final class Connector implements AutoCloseable {
 
         private SocketAddress remoteAddress;
         private TimeProperty autoReconnectInterval;
-        private ObjectSerializer<Message> serializer;
+        private EncodingProtocol protocol;
 
         public ConnectorBuilder(SocketAddress remoteAddress) {
             this.remoteAddress = remoteAddress;
@@ -212,13 +212,13 @@ public final class Connector implements AutoCloseable {
             return this;
         }
 
-        public ConnectorBuilder serializer(ObjectSerializer<Message> serializer) {
-            this.serializer = serializer;
+        public ConnectorBuilder protocol(EncodingProtocol protocol) {
+            this.protocol = protocol;
             return this;
         }
 
         public Connector build() {
-            return new Connector(remoteAddress, autoReconnectInterval, CommonUtils.getOrDefault(serializer, DEFAULT_OBJECT_SERIALIZER));
+            return new Connector(remoteAddress, autoReconnectInterval, CommonUtils.getOrDefault(protocol, DEFAULT_ENCODING_PROTOCOL));
         }
 
     }
