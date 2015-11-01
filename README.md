@@ -9,7 +9,7 @@ Jumping ahead to show how the library is used:
 ```java
 Connector connector = Connector.to(new InetSocketAddress("localhost", 18874))
         .autoReconnect(TimeProperty.seconds(5))
-        .protocol(JsonEncodingProtocol.INSTANCE)
+        .encodingProtocol(JsonEncodingProtocol.INSTANCE)
         .build();
 
 connector.connect();

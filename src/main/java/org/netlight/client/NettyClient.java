@@ -11,6 +11,8 @@ import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslContext;
+import org.netlight.channel.ChannelState;
+import org.netlight.channel.ChannelStateListener;
 import org.netlight.encoding.EncodingProtocol;
 import org.netlight.messaging.MessageQueueLoopGroup;
 import org.netlight.util.EventNotifier;
@@ -31,12 +33,10 @@ public final class NettyClient implements Client {
     private final SslContext sslCtx;
     private final ClientChannelInitializer channelInitializer;
     private final AtomicReferenceField<Channel> channel = new AtomicReferenceField<>();
-    private final AtomicReferenceField<EventLoopGroup> group = new AtomicReferenceField<>();
     private final AtomicBooleanField connected = new AtomicBooleanField(false);
     private final EventNotifier<ChannelState, ChannelStateListener> channelStateNotifier;
 
-    public NettyClient(SocketAddress remoteAddress, SslContext sslCtx,
-                       EncodingProtocol protocol, MessageQueueLoopGroup loopGroup) {
+    public NettyClient(SocketAddress remoteAddress, SslContext sslCtx, EncodingProtocol protocol, MessageQueueLoopGroup loopGroup) {
         Objects.requireNonNull(remoteAddress);
         this.remoteAddress = remoteAddress;
         this.sslCtx = sslCtx;
@@ -44,7 +44,7 @@ public final class NettyClient implements Client {
         channelStateNotifier = new EventNotifier<>(new EventNotifierHandler<ChannelState, ChannelStateListener>() {
             @Override
             public void handle(ChannelState event, ChannelStateListener listener) {
-                listener.stateChanged(event, NettyClient.this);
+                listener.stateChanged(event);
             }
 
             @Override
@@ -65,8 +65,7 @@ public final class NettyClient implements Client {
             final Channel ch = b.connect().sync().channel();
             connected.set(true);
             channel.set(ch);
-            group.set(b.group());
-            ch.closeFuture().addListener(f -> closed());
+            ch.closeFuture().addListener(f -> closed(b.group()));
             fireChannelStateChanged(ChannelState.CONNECTED);
             return true;
         } catch (Exception e) {
@@ -76,10 +75,9 @@ public final class NettyClient implements Client {
         return false;
     }
 
-    private void closed() {
+    private void closed(EventLoopGroup g) {
         connected.set(false);
         channel.set(null);
-        EventLoopGroup g = group.getAndSet(null);
         if (g != null) {
             g.shutdownGracefully();
         }

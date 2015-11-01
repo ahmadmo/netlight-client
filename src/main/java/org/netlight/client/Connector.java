@@ -4,6 +4,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import org.netlight.channel.ChannelState;
+import org.netlight.channel.ChannelStateListener;
+import org.netlight.channel.ServerSentMessageListener;
 import org.netlight.encoding.EncodingProtocol;
 import org.netlight.encoding.JsonEncodingProtocol;
 import org.netlight.messaging.*;
@@ -25,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.netlight.client.ChannelState.*;
+import static org.netlight.channel.ChannelState.*;
 
 /**
  * @author ahmad
@@ -66,7 +69,7 @@ public final class Connector implements AutoCloseable {
         if (autoReconnectInterval != null) {
             client.addChannelStateListener(new AutoReconnector(autoReconnectInterval.to(TimeUnit.MILLISECONDS)));
         }
-        clientHandler = client.getChannelInitializer().getTcpChannelInitializer().getHandler();
+        clientHandler = (ClientHandler) client.getChannelInitializer().getTcpChannelInitializer().getChannelHandler();
         serverSentMessageNotifier = new EventNotifier<>(new EventNotifierHandler<Message, ServerSentMessageListener>() {
             @Override
             public void handle(Message message, ServerSentMessageListener listener) {
@@ -173,7 +176,7 @@ public final class Connector implements AutoCloseable {
         }
 
         @Override
-        public void stateChanged(ChannelState state, Client client) {
+        public void stateChanged(ChannelState state) {
             if (state == CONNECTED) {
                 closed.set(false);
                 serverSentMessageNotifier.start();
@@ -196,7 +199,7 @@ public final class Connector implements AutoCloseable {
 
         private SocketAddress remoteAddress;
         private TimeProperty autoReconnectInterval;
-        private EncodingProtocol protocol;
+        private EncodingProtocol encodingProtocol;
 
         public ConnectorBuilder(SocketAddress remoteAddress) {
             this.remoteAddress = remoteAddress;
@@ -212,13 +215,13 @@ public final class Connector implements AutoCloseable {
             return this;
         }
 
-        public ConnectorBuilder protocol(EncodingProtocol protocol) {
-            this.protocol = protocol;
+        public ConnectorBuilder encodingProtocol(EncodingProtocol encodingProtocol) {
+            this.encodingProtocol = encodingProtocol;
             return this;
         }
 
         public Connector build() {
-            return new Connector(remoteAddress, autoReconnectInterval, CommonUtils.getOrDefault(protocol, DEFAULT_ENCODING_PROTOCOL));
+            return new Connector(remoteAddress, autoReconnectInterval, CommonUtils.getOrDefault(encodingProtocol, DEFAULT_ENCODING_PROTOCOL));
         }
 
     }

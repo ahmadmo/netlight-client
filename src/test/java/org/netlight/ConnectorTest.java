@@ -20,10 +20,10 @@ public final class ConnectorTest {
     public static void main(String[] args) throws IOException {
         Connector connector = Connector.to(new InetSocketAddress("localhost", 18874))
                 .autoReconnect(TimeProperty.seconds(5))
-                .protocol(JsonEncodingProtocol.INSTANCE)
+                .encodingProtocol(JsonEncodingProtocol.INSTANCE)
                 .build();
 
-        connector.addChannelStateListener((state, client) -> {
+        connector.addChannelStateListener((state) -> {
             switch (state) {
                 case CONNECTED:
                     System.out.println("SUCCESSFULLY CONNECTED TO : " + connector.getRemoteAddress());

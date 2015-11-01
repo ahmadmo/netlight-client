@@ -1,7 +1,7 @@
 package org.netlight.client;
 
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
+import org.netlight.channel.ChannelContext;
+import org.netlight.channel.RichChannelHandler;
 import org.netlight.messaging.MessagePromise;
 
 import java.net.SocketAddress;
@@ -10,16 +10,12 @@ import java.util.Collection;
 /**
  * @author ahmad
  */
-public interface ClientHandler extends ChannelHandler {
+public interface ClientHandler extends RichChannelHandler {
 
-    ConnectionContext getConnectionContext(SocketAddress remoteAddress);
+    ChannelContext getConnectionContext(SocketAddress remoteAddress);
 
     void sendMessage(SocketAddress remoteAddress, MessagePromise promise);
 
     void sendMessages(SocketAddress remoteAddress, Collection<MessagePromise> promises);
-
-    void sendMessage(ChannelHandlerContext ctx, MessagePromise promise);
-
-    void sendMessages(ChannelHandlerContext ctx, Collection<MessagePromise> promises);
 
 }

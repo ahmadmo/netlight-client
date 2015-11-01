@@ -2,6 +2,8 @@ package org.netlight.client;
 
 import io.netty.channel.*;
 import io.netty.util.concurrent.Future;
+import org.netlight.channel.ChannelContext;
+import org.netlight.channel.NetLightChannelContext;
 import org.netlight.messaging.Message;
 import org.netlight.messaging.MessagePromise;
 import org.netlight.messaging.MessageQueueLoopGroup;
@@ -23,7 +25,7 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
     private static final int FLUSH_COUNT = 5;
 
     private final MessageQueueLoopGroup loopGroup;
-    private final Map<SocketAddress, ConnectionContext> connections = new ConcurrentHashMap<>();
+    private final Map<SocketAddress, ChannelContext> connections = new ConcurrentHashMap<>();
     private final Map<SocketAddress, Queue<MessagePromise>> pendingMessages = new ConcurrentHashMap<>();
 
     public TcpClientHandler(MessageQueueLoopGroup loopGroup) {
@@ -71,13 +73,13 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
     }
 
     @Override
-    public ConnectionContext getConnectionContext(SocketAddress remoteAddress) {
+    public ChannelContext getConnectionContext(SocketAddress remoteAddress) {
         return connections.get(remoteAddress);
     }
 
     @Override
     public void sendMessage(SocketAddress remoteAddress, MessagePromise promise) {
-        final ConnectionContext ctx = connections.get(remoteAddress);
+        final ChannelContext ctx = connections.get(remoteAddress);
         if (ctx != null) {
             sendMessage(ctx.channelHandlerContext(), promise);
         } else {
@@ -88,7 +90,7 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
 
     @Override
     public void sendMessages(SocketAddress remoteAddress, Collection<MessagePromise> promises) {
-        final ConnectionContext ctx = connections.get(remoteAddress);
+        final ChannelContext ctx = connections.get(remoteAddress);
         if (ctx != null) {
             sendMessages(ctx.channelHandlerContext(), promises);
         } else {
@@ -125,12 +127,12 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
         }
     }
 
-    private ConnectionContext getConnectionContext(ChannelHandlerContext ctx) {
+    private ChannelContext getConnectionContext(ChannelHandlerContext ctx) {
         final String id = ctx.channel().toString();
         final SocketAddress remoteAddress = ctx.channel().remoteAddress();
-        ConnectionContext context = connections.get(remoteAddress);
+        ChannelContext context = connections.get(remoteAddress);
         if (context == null) {
-            final ConnectionContext c = connections.putIfAbsent(remoteAddress, context = new NettyConnectionContext(id, ctx, this));
+            final ChannelContext c = connections.putIfAbsent(remoteAddress, context = new NetLightChannelContext(id, ctx, this));
             if (c != null) {
                 context = c;
             }

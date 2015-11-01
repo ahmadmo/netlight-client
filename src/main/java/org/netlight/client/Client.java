@@ -2,6 +2,8 @@ package org.netlight.client;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.ssl.SslContext;
+import org.netlight.channel.ChannelState;
+import org.netlight.channel.ChannelStateListener;
 
 import java.net.SocketAddress;
 
