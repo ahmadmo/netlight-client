@@ -65,7 +65,7 @@ public final class Connector implements AutoCloseable {
         this.remoteAddress = remoteAddress;
         loopGroup = new MessageQueueLoopGroup(Executors.newCachedThreadPool(), messageHandler,
                 new SingleMessageQueueStrategy(), new LoopShiftingStrategy());
-        client = new NettyClient(remoteAddress, getSslContext(), protocol, loopGroup);
+        client = new NetLightClient(remoteAddress, getSslContext(), protocol, loopGroup);
         if (autoReconnectInterval != null) {
             client.addChannelStateListener(new AutoReconnector(autoReconnectInterval.to(TimeUnit.MILLISECONDS)));
         }
@@ -126,7 +126,7 @@ public final class Connector implements AutoCloseable {
     @Override
     public void close() {
         if (closed.compareAndSet(false, true)) {
-            ((NettyClient) client).close();
+            ((NetLightClient) client).close();
             loopGroup.shutdownGracefully();
         }
     }
