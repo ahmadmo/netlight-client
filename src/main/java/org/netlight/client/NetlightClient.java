@@ -27,7 +27,7 @@ import java.util.Objects;
 /**
  * @author ahmad
  */
-public final class NetlightClient implements Client {
+public final class NetLightClient implements Client {
 
     private final SocketAddress remoteAddress;
     private final SslContext sslCtx;
@@ -36,7 +36,7 @@ public final class NetlightClient implements Client {
     private final AtomicBooleanField connected = new AtomicBooleanField(false);
     private final EventNotifier<ChannelState, ChannelStateListener> channelStateNotifier;
 
-    public NetlightClient(SocketAddress remoteAddress, SslContext sslCtx, EncodingProtocol protocol, MessageQueueLoopGroup loopGroup) {
+    public NetLightClient(SocketAddress remoteAddress, SslContext sslCtx, EncodingProtocol protocol, MessageQueueLoopGroup loopGroup) {
         Objects.requireNonNull(remoteAddress);
         this.remoteAddress = remoteAddress;
         this.sslCtx = sslCtx;
