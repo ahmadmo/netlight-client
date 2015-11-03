@@ -23,6 +23,7 @@ import org.netlight.util.concurrent.AtomicReferenceField;
 
 import java.net.SocketAddress;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author ahmad
@@ -34,6 +35,7 @@ public final class NetLightClient implements Client {
     private final ClientChannelInitializer channelInitializer;
     private final AtomicReferenceField<Channel> channel = new AtomicReferenceField<>();
     private final AtomicBooleanField connected = new AtomicBooleanField(false);
+    private final AtomicReference<ChannelState> state = new AtomicReference<>(ChannelState.DISCONNECTED);
     private final EventNotifier<ChannelState, ChannelStateListener> channelStateNotifier;
 
     public NetLightClient(SocketAddress remoteAddress, SslContext sslCtx, EncodingProtocol protocol, MessageQueueLoopGroup loopGroup) {
@@ -71,6 +73,7 @@ public final class NetLightClient implements Client {
         } catch (Exception e) {
             connected.set(false);
             fireChannelStateChanged(ChannelState.CONNECTION_FAILED);
+            channelStateNotifier.stopLater();
         }
         return false;
     }
@@ -126,6 +129,11 @@ public final class NetLightClient implements Client {
     }
 
     @Override
+    public ChannelState getChannelState() {
+        return state.get();
+    }
+
+    @Override
     public void addChannelStateListener(ChannelStateListener channelStateListener) {
         channelStateNotifier.addListener(channelStateListener);
     }
@@ -137,6 +145,7 @@ public final class NetLightClient implements Client {
 
     @Override
     public void fireChannelStateChanged(ChannelState state) {
+        this.state.set(state);
         channelStateNotifier.notify(state);
     }
 

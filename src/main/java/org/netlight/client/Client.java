@@ -24,6 +24,8 @@ public interface Client extends AutoCloseable {
 
     ClientChannelInitializer getChannelInitializer();
 
+    ChannelState getChannelState();
+
     void addChannelStateListener(ChannelStateListener channelStateListener);
 
     void removeChannelStateListener(ChannelStateListener channelStateListener);

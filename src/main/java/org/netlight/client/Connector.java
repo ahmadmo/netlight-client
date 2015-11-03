@@ -28,8 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.netlight.channel.ChannelState.*;
-
 /**
  * @author ahmad
  */
@@ -88,6 +86,9 @@ public final class Connector implements AutoCloseable {
     }
 
     public boolean connect() {
+        if (closed.get()) {
+            throw new IllegalStateException("Connector closed");
+        }
         return client.connect();
     }
 
@@ -104,6 +105,9 @@ public final class Connector implements AutoCloseable {
     }
 
     public MessageFuture send(Message message) {
+        if (closed.get()) {
+            throw new IllegalStateException("Connector closed");
+        }
         return messageHandler.send(message);
     }
 
@@ -123,16 +127,18 @@ public final class Connector implements AutoCloseable {
         serverSentMessageNotifier.removeListener(listener);
     }
 
+    public void diconnect() {
+        ((NetLightClient) client).close();
+        serverSentMessageNotifier.stopLater();
+    }
+
     @Override
     public void close() {
         if (closed.compareAndSet(false, true)) {
             ((NetLightClient) client).close();
             loopGroup.shutdownGracefully();
+            serverSentMessageNotifier.stop();
         }
-    }
-
-    public void diconnect() {
-        close();
     }
 
     private final class MessageHandler implements MessageQueueLoopHandler {
@@ -177,19 +183,25 @@ public final class Connector implements AutoCloseable {
 
         @Override
         public void stateChanged(ChannelState state) {
-            if (state == CONNECTED) {
-                closed.set(false);
-                serverSentMessageNotifier.start();
-            } else if (state == DISCONNECTED || state == CONNECTION_FAILED && !closed.get()) {
-                serverSentMessageNotifier.stopLater();
-                new Timer().schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        if (!closed.get()) {
-                            client.connect();
+            if (closed.get()) {
+                return;
+            }
+            switch (state) {
+                case CONNECTED:
+                    serverSentMessageNotifier.start();
+                    break;
+                case DISCONNECTED:
+                case CONNECTION_FAILED:
+                    serverSentMessageNotifier.stopLater();
+                    new Timer().schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            if (!closed.get()) {
+                                client.connect();
+                            }
                         }
-                    }
-                }, delay);
+                    }, delay);
+                    break;
             }
         }
 
