@@ -14,3 +14,9 @@ Connector connector = Connector.to(new InetSocketAddress("localhost", 18874))
 
 connector.connect();
 ```
+
+## Links
+
+[netlight-core](https://github.com/ahmadmo/netlight-core)
+
+[netlight-server](https://github.com/ahmadmo/netlight-server)
