@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * @author ahmad
  */
 @ChannelHandler.Sharable
-public final class TcpClientHandler extends AbstractRichChannelHandler implements ClientHandler {
+public final class TcpClientHandler extends AbstractRichChannelHandler<Message> implements ClientHandler {
 
     private static final int FLUSH_COUNT = 5;
 
