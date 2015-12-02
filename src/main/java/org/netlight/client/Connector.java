@@ -191,7 +191,7 @@ public final class Connector implements AutoCloseable {
 
         @Override
         public void exceptionCaught(MessageQueueLoop loop, Message message, Throwable cause) {
-            cause.printStackTrace(); // TODO log
+            cause.printStackTrace();
         }
 
     }
