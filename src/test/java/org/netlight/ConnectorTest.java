@@ -1,7 +1,7 @@
 package org.netlight;
 
 import org.netlight.client.Connector;
-import org.netlight.encoding.JsonEncodingProtocol;
+import org.netlight.encoding.MessageEncodingProtocol;
 import org.netlight.messaging.Message;
 import org.netlight.messaging.MessageFuture;
 import org.netlight.messaging.MessageFutureListener;
@@ -20,18 +20,18 @@ public final class ConnectorTest {
     public static void main(String[] args) throws IOException {
         Connector connector = Connector.to(new InetSocketAddress("localhost", 18874))
                 .autoReconnect(TimeProperty.seconds(5))
-                .encodingProtocol(JsonEncodingProtocol.INSTANCE)
+                .messageEncodingProtocol(MessageEncodingProtocol.JSON)
                 .build();
 
         connector.addChannelStateListener((state) -> {
             switch (state) {
-                case CONNECTED:
+                case OPENED:
                     System.out.println("SUCCESSFULLY CONNECTED TO : " + connector.getRemoteAddress());
                     break;
-                case DISCONNECTED:
+                case CLOSED:
                     System.out.println("DISCONNECTED FROM : " + connector.getRemoteAddress());
                     break;
-                case CONNECTION_FAILED:
+                case OPEN_FAILURE:
                     System.out.println("UNABLE TO CONNECT TO : " + connector.getRemoteAddress());
                     break;
             }

@@ -7,8 +7,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.netlight.channel.ChannelState;
 import org.netlight.channel.ChannelStateListener;
 import org.netlight.channel.ServerSentMessageListener;
-import org.netlight.encoding.EncodingProtocol;
-import org.netlight.encoding.JsonEncodingProtocol;
+import org.netlight.encoding.MessageEncodingProtocol;
 import org.netlight.messaging.*;
 import org.netlight.util.CommonUtils;
 import org.netlight.util.EventNotifier;
@@ -33,7 +32,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class Connector implements AutoCloseable {
 
-    private static final EncodingProtocol DEFAULT_ENCODING_PROTOCOL = JsonEncodingProtocol.INSTANCE;
+    private static final MessageEncodingProtocol DEFAULT_ENCODING_PROTOCOL = MessageEncodingProtocol.JSON;
 
     private static final String MESSAGE_ID = "message_id";
     private static final String CORRELATION_ID = "correlation_id";
@@ -55,15 +54,15 @@ public final class Connector implements AutoCloseable {
         this(remoteAddress, autoReconnectInterval, DEFAULT_ENCODING_PROTOCOL);
     }
 
-    public Connector(SocketAddress remoteAddress, EncodingProtocol protocol) {
+    public Connector(SocketAddress remoteAddress, MessageEncodingProtocol protocol) {
         this(remoteAddress, null, protocol);
     }
 
-    public Connector(SocketAddress remoteAddress, TimeProperty autoReconnectInterval, EncodingProtocol protocol) {
+    public Connector(SocketAddress remoteAddress, TimeProperty autoReconnectInterval, MessageEncodingProtocol messageEncodingProtocol) {
         this.remoteAddress = remoteAddress;
         loopGroup = new MessageQueueLoopGroup(Executors.newCachedThreadPool(), messageHandler,
                 new SingleMessageQueueStrategy(), new LoopShiftingStrategy());
-        client = new NetLightClient(remoteAddress, getSslContext(), protocol, loopGroup);
+        client = new NetLightClient(remoteAddress, getSslContext(), messageEncodingProtocol, loopGroup);
         if (autoReconnectInterval != null) {
             client.addChannelStateListener(new AutoReconnector(autoReconnectInterval.to(TimeUnit.MILLISECONDS)));
         }
@@ -104,11 +103,26 @@ public final class Connector implements AutoCloseable {
         return client.isConnected();
     }
 
+    public MessagePromise newPromise(Message message){
+        return clientHandler.newPromise(remoteAddress, message);
+    }
+
+    public MessagePromise voidPromise(Message message) {
+        return clientHandler.voidPromise(remoteAddress, message);
+    }
+
     public MessageFuture send(Message message) {
         if (closed.get()) {
             throw new IllegalStateException("Connector closed");
         }
         return messageHandler.send(message);
+    }
+
+    public MessageFuture send(MessagePromise promise) {
+        if (closed.get()) {
+            throw new IllegalStateException("Connector closed");
+        }
+        return messageHandler.send(promise);
     }
 
     public void addChannelStateListener(ChannelStateListener listener) {
@@ -151,7 +165,16 @@ public final class Connector implements AutoCloseable {
             message.put(MESSAGE_ID, id);
             MessagePromise promise = new DefaultMessagePromise(message, remoteAddress);
             messageTracking.put(id, promise);
-            clientHandler.sendMessage(remoteAddress, promise);
+            clientHandler.sendMessage(promise);
+            return promise;
+        }
+
+        private MessageFuture send(MessagePromise promise) {
+            Objects.requireNonNull(promise);
+            long id = ID.incrementAndGet();
+            promise.message().put(MESSAGE_ID, id);
+            messageTracking.put(id, promise);
+            clientHandler.sendMessage(promise);
             return promise;
         }
 
@@ -187,11 +210,11 @@ public final class Connector implements AutoCloseable {
                 return;
             }
             switch (state) {
-                case CONNECTED:
+                case OPENED:
                     serverSentMessageNotifier.start();
                     break;
-                case DISCONNECTED:
-                case CONNECTION_FAILED:
+                case CLOSED:
+                case OPEN_FAILURE:
                     serverSentMessageNotifier.stopLater();
                     new Timer().schedule(new TimerTask() {
                         @Override
@@ -211,7 +234,7 @@ public final class Connector implements AutoCloseable {
 
         private SocketAddress remoteAddress;
         private TimeProperty autoReconnectInterval;
-        private EncodingProtocol encodingProtocol;
+        private MessageEncodingProtocol messageEncodingProtocol;
 
         public ConnectorBuilder(SocketAddress remoteAddress) {
             this.remoteAddress = remoteAddress;
@@ -227,13 +250,13 @@ public final class Connector implements AutoCloseable {
             return this;
         }
 
-        public ConnectorBuilder encodingProtocol(EncodingProtocol encodingProtocol) {
-            this.encodingProtocol = encodingProtocol;
+        public ConnectorBuilder messageEncodingProtocol(MessageEncodingProtocol messageEncodingProtocol) {
+            this.messageEncodingProtocol = messageEncodingProtocol;
             return this;
         }
 
         public Connector build() {
-            return new Connector(remoteAddress, autoReconnectInterval, CommonUtils.getOrDefault(encodingProtocol, DEFAULT_ENCODING_PROTOCOL));
+            return new Connector(remoteAddress, autoReconnectInterval, CommonUtils.getOrDefault(messageEncodingProtocol, DEFAULT_ENCODING_PROTOCOL));
         }
 
     }

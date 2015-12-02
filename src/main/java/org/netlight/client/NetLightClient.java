@@ -13,7 +13,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import org.netlight.channel.ChannelState;
 import org.netlight.channel.ChannelStateListener;
-import org.netlight.encoding.EncodingProtocol;
+import org.netlight.encoding.MessageEncodingProtocol;
 import org.netlight.messaging.MessageQueueLoopGroup;
 import org.netlight.util.EventNotifier;
 import org.netlight.util.EventNotifierHandler;
@@ -34,14 +34,14 @@ public final class NetLightClient implements Client {
     private final ClientChannelInitializer channelInitializer;
     private final AtomicReferenceField<Channel> channel = new AtomicReferenceField<>();
     private final AtomicBooleanField connected = new AtomicBooleanField(false);
-    private final AtomicReferenceField<ChannelState> state = new AtomicReferenceField<>(ChannelState.DISCONNECTED);
+    private final AtomicReferenceField<ChannelState> state = new AtomicReferenceField<>(ChannelState.CLOSED);
     private final EventNotifier<ChannelState, ChannelStateListener> channelStateNotifier;
 
-    public NetLightClient(SocketAddress remoteAddress, SslContext sslCtx, EncodingProtocol protocol, MessageQueueLoopGroup loopGroup) {
+    public NetLightClient(SocketAddress remoteAddress, SslContext sslCtx, MessageEncodingProtocol messageEncodingProtocol, MessageQueueLoopGroup loopGroup) {
         Objects.requireNonNull(remoteAddress);
         this.remoteAddress = remoteAddress;
         this.sslCtx = sslCtx;
-        this.channelInitializer = new ClientChannelInitializer(remoteAddress, sslCtx, protocol, loopGroup);
+        this.channelInitializer = new ClientChannelInitializer(remoteAddress, sslCtx, messageEncodingProtocol, loopGroup);
         channelStateNotifier = new EventNotifier<>(new EventNotifierHandler<ChannelState, ChannelStateListener>() {
             @Override
             public void handle(ChannelState event, ChannelStateListener listener) {
@@ -67,11 +67,11 @@ public final class NetLightClient implements Client {
             connected.set(true);
             channel.set(ch);
             ch.closeFuture().addListener(f -> closed(b.group()));
-            fireChannelStateChanged(ChannelState.CONNECTED);
+            fireChannelStateChanged(ChannelState.OPENED);
             return true;
         } catch (Exception e) {
             connected.set(false);
-            fireChannelStateChanged(ChannelState.CONNECTION_FAILED);
+            fireChannelStateChanged(ChannelState.OPEN_FAILURE);
             channelStateNotifier.stopLater();
         }
         return false;
@@ -83,7 +83,7 @@ public final class NetLightClient implements Client {
         if (g != null) {
             g.shutdownGracefully();
         }
-        fireChannelStateChanged(ChannelState.DISCONNECTED);
+        fireChannelStateChanged(ChannelState.CLOSED);
         channelStateNotifier.stopLater();
     }
 

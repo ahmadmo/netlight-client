@@ -1,9 +1,13 @@
 package org.netlight.client;
 
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Future;
+import org.netlight.channel.AbstractRichChannelHandler;
 import org.netlight.channel.ChannelContext;
 import org.netlight.channel.NetLightChannelContext;
+import org.netlight.messaging.DefaultMessagePromise;
 import org.netlight.messaging.Message;
 import org.netlight.messaging.MessagePromise;
 import org.netlight.messaging.MessageQueueLoopGroup;
@@ -20,7 +24,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * @author ahmad
  */
 @ChannelHandler.Sharable
-public final class TcpClientHandler extends SimpleChannelInboundHandler<Message> implements ClientHandler {
+public final class TcpClientHandler extends AbstractRichChannelHandler implements ClientHandler {
 
     private static final int FLUSH_COUNT = 5;
 
@@ -59,10 +63,7 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         final Channel channel = ctx.channel();
         if (channel.isWritable()) {
-            Queue<MessagePromise> queue = pendingMessages.remove(channel.remoteAddress());
-            if (queue != null) {
-                sendMessages(ctx, queue);
-            }
+            sendMessages(ctx, pendingMessages.remove(channel.remoteAddress()));
         }
     }
 
@@ -78,7 +79,15 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
     }
 
     @Override
-    public void sendMessage(SocketAddress remoteAddress, MessagePromise promise) {
+    public MessagePromise sendMessage(SocketAddress remoteAddress, Message message) {
+        MessagePromise promise = newPromise(remoteAddress, message);
+        sendMessage(promise);
+        return promise;
+    }
+
+    @Override
+    public void sendMessage(MessagePromise promise) {
+        final SocketAddress remoteAddress = promise.remoteAddress();
         final ChannelContext ctx = connections.get(remoteAddress);
         if (ctx != null) {
             sendMessage(ctx.channelHandlerContext(), promise);
@@ -89,7 +98,18 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
     }
 
     @Override
-    public void sendMessages(SocketAddress remoteAddress, Collection<MessagePromise> promises) {
+    public Collection<MessagePromise> sendMessages(SocketAddress remoteAddress, Collection<Message> messages) {
+        Collection<MessagePromise> promises = newPromises(remoteAddress, messages);
+        sendMessages(promises);
+        return promises;
+    }
+
+    @Override
+    public void sendMessages(Collection<MessagePromise> promises) {
+        if (promises.isEmpty()) {
+            return;
+        }
+        final SocketAddress remoteAddress = promises.iterator().next().remoteAddress();
         final ChannelContext ctx = connections.get(remoteAddress);
         if (ctx != null) {
             sendMessages(ctx.channelHandlerContext(), promises);
@@ -106,7 +126,11 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
         }
         final Channel channel = ctx.channel();
         if (channel.isActive() && channel.isWritable()) {
-            ctx.writeAndFlush(promise.message()).addListener(f -> completePromise(promise, f));
+            if (promise instanceof DefaultMessagePromise) {
+                ctx.writeAndFlush(promise.message()).addListener(f -> completePromise(promise, f));
+            } else {
+                ctx.writeAndFlush(promise.message(), ctx.voidPromise());
+            }
         } else {
             promise.setCancellable(true);
             getQueue(channel.remoteAddress()).offer(promise);
@@ -182,8 +206,12 @@ public final class TcpClientHandler extends SimpleChannelInboundHandler<Message>
             while (!promises.isEmpty() && channel.isActive() && channel.isWritable()) {
                 for (int i = 0; i < FLUSH_COUNT && (promise = promises.poll()) != null; i++) {
                     if (!promise.isCancelled() && !promise.message().isEmpty()) {
-                        final MessagePromise p = promise;
-                        ctx.write(p.message()).addListener(f -> completePromise(p, f));
+                        if (promise instanceof DefaultMessagePromise) {
+                            final MessagePromise p = promise;
+                            ctx.write(p.message()).addListener(f -> completePromise(p, f));
+                        } else {
+                            ctx.write(promise.message(), ctx.voidPromise());
+                        }
                     }
                 }
                 ctx.flush();
